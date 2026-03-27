@@ -1,0 +1,177 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2026-03-25T00:00:00.000Z",
+  "__export_source": "insomnia.desktop.app:v2024.7.0",
+  "resources": [
+    {
+      "_id": "wrk_ventaagent",
+      "parentId": null,
+      "_type": "workspace",
+      "name": "ventaagent-ms",
+      "description": "MS Agentic - VRA Agent API",
+      "scope": "collection"
+    },
+    {
+      "_id": "env_base",
+      "parentId": "wrk_ventaagent",
+      "_type": "environment",
+      "name": "Base Environment",
+      "data": {
+        "base_url": "http://localhost:8080/agent"
+      },
+      "isPrivate": false
+    },
+    {
+      "_id": "fld_auth",
+      "parentId": "wrk_ventaagent",
+      "_type": "request_group",
+      "name": "1. Auth",
+      "environment": {}
+    },
+    {
+      "_id": "fld_health",
+      "parentId": "wrk_ventaagent",
+      "_type": "request_group",
+      "name": "2. Health",
+      "environment": {}
+    },
+    {
+      "_id": "fld_chat",
+      "parentId": "wrk_ventaagent",
+      "_type": "request_group",
+      "name": "3. Chat",
+      "environment": {}
+    },
+    {
+      "_id": "fld_ingest",
+      "parentId": "wrk_ventaagent",
+      "_type": "request_group",
+      "name": "4. Ingest",
+      "environment": {}
+    },
+    {
+      "_id": "req_login",
+      "parentId": "fld_auth",
+      "_type": "request",
+      "name": "POST Login",
+      "description": "Obtener JWT. El token se encadena automaticamente a los demas requests via response reference.",
+      "method": "POST",
+      "url": "{{ _.base_url }}/auth/login",
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"username\": \"ejecutivo1\",\n  \"password\": \"test123\"\n}"
+      },
+      "parameters": []
+    },
+    {
+      "_id": "req_health",
+      "parentId": "fld_health",
+      "_type": "request",
+      "name": "GET Health",
+      "description": "Health check - sin auth",
+      "method": "GET",
+      "url": "{{ _.base_url }}/health",
+      "headers": [],
+      "body": {},
+      "parameters": []
+    },
+    {
+      "_id": "req_chat_new",
+      "parentId": "fld_chat",
+      "_type": "request",
+      "name": "POST Chat - Nuevo thread",
+      "description": "Inicia nueva conversacion con VRA Agent",
+      "method": "POST",
+      "url": "{{ _.base_url }}/chat",
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {% response 'body', 'req_login', '$.data.accessToken', 'when-expired', 60 %}" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"message\": \"¿Cuáles son los requisitos para un traspaso total de rentas anuales?\"\n}"
+      },
+      "parameters": []
+    },
+    {
+      "_id": "req_chat_stream",
+      "parentId": "fld_chat",
+      "_type": "request",
+      "name": "POST Chat - Stream (SSE)",
+      "description": "Chat con streaming SSE. La respuesta llega token a token. Eventos: metadata (threadId), text (tokens), sources (fuentes RAG), done (fin).",
+      "method": "POST",
+      "url": "{{ _.base_url }}/chat/stream",
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {% response 'body', 'req_login', '$.data.accessToken', 'when-expired', 60 %}" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"message\": \"¿Cuáles son los requisitos para un traspaso total de rentas anuales?\"\n}"
+      },
+      "parameters": []
+    },
+    {
+      "_id": "req_chat_thread",
+      "parentId": "fld_chat",
+      "_type": "request",
+      "name": "POST Chat - Thread existente",
+      "description": "Continua conversacion en thread existente",
+      "method": "POST",
+      "url": "{{ _.base_url }}/chat",
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {% response 'body', 'req_login', '$.data.accessToken', 'when-expired', 60 %}" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"message\": \"¿Y cuál es el plazo máximo?\",\n  \"threadId\": \"PASTE_THREAD_ID_HERE\",\n  \"resourceId\": \"user-1\"\n}"
+      },
+      "parameters": []
+    },
+    {
+      "_id": "req_ingest_gcs",
+      "parentId": "fld_ingest",
+      "_type": "request",
+      "name": "POST Ingest - Desde GCS",
+      "description": "Ingesta documento desde Google Cloud Storage",
+      "method": "POST",
+      "url": "{{ _.base_url }}/ingest",
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {% response 'body', 'req_login', '$.data.accessToken', 'when-expired', 60 %}" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"bucketName\": \"vra-docs-bucket\",\n  \"fileName\": \"producto-rentas-anuales.pdf\",\n  \"chunkStrategy\": \"recursive\",\n  \"chunkSize\": 512,\n  \"chunkOverlap\": 50\n}"
+      },
+      "parameters": []
+    },
+    {
+      "_id": "req_ingest_upload",
+      "parentId": "fld_ingest",
+      "_type": "request",
+      "name": "POST Ingest - Upload archivo",
+      "description": "Sube archivo manual a vector DB (TXT, MD, PDF - max 10MB)",
+      "method": "POST",
+      "url": "{{ _.base_url }}/ingest/upload",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {% response 'body', 'req_login', '$.data.accessToken', 'when-expired', 60 %}" }
+      ],
+      "body": {
+        "mimeType": "multipart/form-data",
+        "params": [
+          { "name": "file", "type": "file", "fileName": "", "value": "", "description": "TXT, MD o PDF (max 10MB)" },
+          { "name": "chunkStrategy", "type": "text", "value": "recursive", "description": "recursive | markdown | sentence" },
+          { "name": "chunkSize", "type": "text", "value": "512" },
+          { "name": "chunkOverlap", "type": "text", "value": "50" }
+        ]
+      },
+      "parameters": []
+    }
+  ]
+}

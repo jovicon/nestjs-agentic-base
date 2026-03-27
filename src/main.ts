@@ -15,7 +15,15 @@ async function bootstrap() {
 
   // Security
   app.use(helmet())
-  app.use(compression())
+  app.use(
+    compression({
+      filter: (req, res) => {
+        // Disable compression for SSE streams so chunks are flushed immediately
+        if (req.headers.accept === 'text/event-stream') return false
+        return compression.filter(req, res)
+      },
+    }),
+  )
 
   // CORS for VRA BFF
   app.enableCors({

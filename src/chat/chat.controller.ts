@@ -1,5 +1,5 @@
-import { Body, Controller, Post, Req } from '@nestjs/common'
-import { Request } from 'express'
+import { Body, Controller, Post, Req, Res } from '@nestjs/common'
+import { Request, Response } from 'express'
 import { ChatService } from './chat.service.js'
 import { ChatRequestDto } from './dto/chat-request.dto.js'
 import { ApiResponseDto } from '../common/dto/api-response.dto.js'
@@ -17,5 +17,15 @@ export class ChatController {
     const user = req.user as { userId: string }
     const result = await this.chatService.processMessage(dto, user.userId)
     return ApiResponseDto.ok(result)
+  }
+
+  @Post('stream')
+  async stream(
+    @Body() dto: ChatRequestDto,
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
+    const user = req.user as { userId: string }
+    await this.chatService.streamMessage(dto, user.userId, res)
   }
 }

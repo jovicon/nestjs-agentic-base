@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common'
+import { Global, Logger, Module } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import {
   MASTRA_VECTOR_STORE,
@@ -8,6 +8,9 @@ import {
   MASTRA_AGENT,
 } from '../../common/constants/injection-tokens.js'
 
+const logger = new Logger('MastraLoaderModule')
+
+@Global()
 @Module({
   providers: [
     {
@@ -27,7 +30,16 @@ import {
       provide: MASTRA_MEMORY,
       useFactory: async (configService: ConfigService) => {
         const { Memory } = await import('@mastra/memory')
+        const { MongoDBStore } = await import('@mastra/mongodb')
+
+        const storage = new MongoDBStore({
+          id: 'vra-memory-store',
+          uri: configService.get<string>('mongodb.uri')!,
+          dbName: configService.get<string>('mongodb.database')!,
+        })
+
         return new Memory({
+          storage,
           options: {
             lastMessages: 20,
             semanticRecall: false,
@@ -40,10 +52,12 @@ import {
       provide: MASTRA_RAG_TOOL,
       useFactory: async (configService: ConfigService, vectorStore: any) => {
         const { createVectorQueryTool } = await import('@mastra/rag')
+        const { voyage } = await import('voyage-ai-provider')
+        const embeddingModel = configService.get<string>('anthropic.embeddingModel', 'voyage-3-lite')!
         return createVectorQueryTool({
-          vectorStoreName: 'mongodb-atlas',
+          vectorStore,
           indexName: configService.get<string>('vectorSearch.indexName')!,
-          model: configService.get<string>('anthropic.embeddingModel')!,
+          model: voyage.textEmbeddingModel(embeddingModel),
           description: 'Search VRA product documentation and knowledge base for relevant information',
         })
       },
@@ -75,20 +89,28 @@ import {
         mcpClient: any,
       ) => {
         const { Agent } = await import('@mastra/core/agent')
-        const mcpTools = await mcpClient.listTools()
+
+        let mcpTools: Record<string, unknown> = {}
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+          mcpTools = await mcpClient.listTools() as Record<string, unknown>
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err)
+          logger.warn(`MCP server unavailable, starting without MCP tools: ${message}`)
+        }
 
         return new Agent({
           id: 'vra-agent',
           name: 'VRA Agent',
-          instructions: `Eres un asistente especializado en Venta de Rentas Anuales (VRA).
-Tu rol es ayudar a los ejecutivos con información sobre productos de rentas anuales,
-procedimientos de traspaso, y consultas sobre transacciones.
+          instructions:   `Eres un asistente especializado en Venta de Rentas Anuales (VRA).
+                          Tu rol es ayudar a los ejecutivos con información sobre productos de rentas anuales,
+                          procedimientos de traspaso, y consultas sobre transacciones.
 
-Utiliza las herramientas disponibles para:
-1. Buscar documentación relevante del producto (RAG)
-2. Consultar transacciones en la base de datos (MCP)
+                          Utiliza las herramientas disponibles para:
+                          1. Buscar documentación relevante del producto (RAG)
+                          2. Consultar transacciones en la base de datos (MCP)
 
-Responde siempre en español. Sé preciso y conciso.`,
+                          Responde siempre en español. Sé preciso y conciso.`,
           model: configService.get<string>('anthropic.agentModel')!,
           tools: {
             vectorQuery: ragTool,
