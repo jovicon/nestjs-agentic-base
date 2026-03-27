@@ -12,7 +12,14 @@ export class AgentService {
   async generate(message: string, context: ChatContext): Promise<AgentResponse> {
     this.logger.log(`Generating response for thread: ${context.threadId}`)
 
-    const result = await this.agent.generate(message, {
+    const now = new Date()
+    const fecha = now.toISOString().split('T')[0]
+    const hora = now.toTimeString().split(' ')[0]
+    const contextParts = [`[Contexto de sesión: fecha = ${fecha}, hora = ${hora}`]
+    if (context.rut) contextParts.push(`, RUT del ejecutivo = ${context.rut}`)
+    const contextMessage = contextParts.join('') + ']\n\n'
+
+    const result = await this.agent.generate(`${contextMessage}${message}`, {
       threadId: context.threadId,
       resourceId: context.resourceId,
     })
@@ -27,7 +34,14 @@ export class AgentService {
   async stream(message: string, context: ChatContext) {
     this.logger.log(`Streaming response for thread: ${context.threadId}`)
 
-    return this.agent.stream(message, {
+    const now = new Date()
+    const fecha = now.toISOString().split('T')[0]
+    const hora = now.toTimeString().split(' ')[0]
+    const contextParts = [`[Contexto de sesión: fecha = ${fecha}, hora = ${hora}`]
+    if (context.rut) contextParts.push(`, RUT del ejecutivo = ${context.rut}`)
+    const contextMessage = contextParts.join('') + ']\n\n'
+
+    return this.agent.stream(`${contextMessage}${message}`, {
       threadId: context.threadId,
       resourceId: context.resourceId,
     })

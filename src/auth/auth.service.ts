@@ -8,13 +8,12 @@ export class AuthService {
   constructor(private readonly jwtService: JwtService) {}
 
   async login(dto: LoginRequestDto): Promise<TokenResponseDto> {
-    // TODO: Replace with real user validation (e.g., against DB or external IdP)
-    // This is a placeholder for development/testing
-    const user = this.validateUser(dto.username, dto.password)
+    const user = this.validateUser(dto)
 
     const payload = {
-      sub: user.id,
+      nombre: user.nombre,
       email: user.email,
+      rut: user.rut,
       roles: user.roles,
     }
 
@@ -29,16 +28,15 @@ export class AuthService {
     }
   }
 
-  private validateUser(username: string, password: string) {
-    // TODO: Implement real authentication logic
-    // For now, accept any non-empty credentials for testing
-    if (!username || !password) {
+  private validateUser(dto: LoginRequestDto) {
+    if (!dto.username || !dto.password || !dto.rut) {
       throw new UnauthorizedException('Invalid credentials')
     }
 
     return {
-      id: `user-${username}`,
-      email: `${username}@vra.cl`,
+      nombre: `${dto.username}`,
+      rut: `${dto.rut}`,
+      email: `${dto.username}@vra.cl`,
       roles: ['ejecutivo'],
     }
   }

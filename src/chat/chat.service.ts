@@ -11,7 +11,7 @@ export class ChatService {
 
   constructor(private readonly agentService: AgentService) {}
 
-  async processMessage(dto: ChatRequestDto, userId: string): Promise<ChatResponseDto> {
+  async processMessage(dto: ChatRequestDto, userId: string, rut?: string): Promise<ChatResponseDto> {
     const threadId = dto.threadId ?? randomUUID()
     const resourceId = dto.resourceId ?? userId
 
@@ -20,6 +20,7 @@ export class ChatService {
     const result = await this.agentService.generate(dto.message, {
       threadId,
       resourceId,
+      rut,
     })
 
     return {
@@ -30,7 +31,7 @@ export class ChatService {
     }
   }
 
-  async streamMessage(dto: ChatRequestDto, userId: string, res: Response): Promise<void> {
+  async streamMessage(dto: ChatRequestDto, userId: string, rut: string | undefined, res: Response): Promise<void> {
     const threadId = dto.threadId ?? randomUUID()
     const resourceId = dto.resourceId ?? userId
 
@@ -48,6 +49,7 @@ export class ChatService {
     const output = await this.agentService.stream(dto.message, {
       threadId,
       resourceId,
+      rut,
     })
 
     const reader = output.textStream.getReader()

@@ -14,8 +14,8 @@ export class ChatController {
     @Body() dto: ChatRequestDto,
     @Req() req: Request,
   ): Promise<ApiResponseDto<ChatResponseDto>> {
-    const user = req.user as { userId: string }
-    const result = await this.chatService.processMessage(dto, user.userId)
+    const user = req.user as { userId: string; rut?: string }
+    const result = await this.chatService.processMessage(dto, user.userId, user.rut)
     return ApiResponseDto.ok(result)
   }
 
@@ -25,7 +25,7 @@ export class ChatController {
     @Req() req: Request,
     @Res() res: Response,
   ): Promise<void> {
-    const user = req.user as { userId: string }
-    await this.chatService.streamMessage(dto, user.userId, res)
+    const user = req.user as { userId: string; rut?: string }
+    await this.chatService.streamMessage(dto, user.userId, user.rut, res)
   }
 }

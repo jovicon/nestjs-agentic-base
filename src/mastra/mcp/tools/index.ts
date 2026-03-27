@@ -1,1 +1,4 @@
-export { transaccionesToolDefinition, verificacionesToolDefinition } from './transacciones.tool.js'
+export {
+  transaccionesToolDefinition,
+  traspasoPorClienteToolDefinition,
+} from './transacciones.tool.js'
